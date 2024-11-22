@@ -27,6 +27,11 @@ class LightMNIST(nn.Module):
         return F.log_softmax(x, dim=1)
 
 def train_model():
+    # Set random seed for reproducibility
+    torch.manual_seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(42)
+    
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -43,7 +48,7 @@ def train_model():
     # Model, loss and optimizer
     model = LightMNIST().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.006, betas=(0.9, 0.999))
     
     # Calculate total parameters
     total_params = sum(p.numel() for p in model.parameters())
