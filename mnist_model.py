@@ -8,54 +8,47 @@ class LightMNIST(nn.Module):
     def __init__(self):
         super(LightMNIST, self).__init__()
         # Input: 1x28x28
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)  # 16x28x28
-        self.bn1 = nn.BatchNorm2d(16)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)  # 32x14x14
-        self.bn2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 16, kernel_size=3, padding=1)  # 16x7x7
-        self.bn3 = nn.BatchNorm2d(16)
-        self.dropout = nn.Dropout(0.2)
-        self.fc1 = nn.Linear(16 * 7 * 7, 10)
+        self.conv1 = nn.Conv2d(1, 8, kernel_size=3)  # 8x26x26
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=3)  # 16x24x24
+        self.conv3 = nn.Conv2d(16, 32, kernel_size=3)  # 32x22x22
+        self.fc1 = nn.Linear(32 * 9 * 9, 128)
+        self.fc2 = nn.Linear(128, 10)
+        self.dropout = nn.Dropout(0.1)
         
     def forward(self, x):
-        x = self.bn1(F.relu(self.conv1(x)))
-        x = F.max_pool2d(x, 2)  # 16x14x14
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2)  # 16x12x12
         x = self.dropout(x)
         
-        x = self.bn2(F.relu(self.conv2(x)))
-        x = F.max_pool2d(x, 2)  # 32x7x7
+        x = F.relu(self.conv3(x))
+        x = F.max_pool2d(x, 2)  # 32x9x9
         x = self.dropout(x)
         
-        x = self.bn3(F.relu(self.conv3(x)))
+        x = x.view(-1, 32 * 9 * 9)
+        x = F.relu(self.fc1(x))
         x = self.dropout(x)
-        
-        x = x.view(-1, 16 * 7 * 7)
-        x = self.fc1(x)
+        x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
 def train_model():
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    # Data loading with augmentation
+    # Data loading with minimal augmentation
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,)),
-        transforms.RandomRotation(10),
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1))
+        transforms.Normalize((0.1307,), (0.3081,))
     ])
     
     train_dataset = datasets.MNIST(root='./data', train=True, 
                                  transform=transform, download=True)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=128, shuffle=True)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=64, shuffle=True)
     
     # Model, loss and optimizer
     model = LightMNIST().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.002,
-                                                  steps_per_epoch=len(train_loader),
-                                                  epochs=1)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
     
     # Calculate total parameters
     total_params = sum(p.numel() for p in model.parameters())
@@ -74,7 +67,6 @@ def train_model():
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-        scheduler.step()
         
         # Calculate accuracy
         pred = output.argmax(dim=1, keepdim=True)
