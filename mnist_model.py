@@ -8,34 +8,29 @@ class LightMNIST(nn.Module):
     def __init__(self):
         super(LightMNIST, self).__init__()
         # Input: 1x28x28
-        self.conv1 = nn.Conv2d(1, 8, kernel_size=3)  # 8x26x26
-        self.conv2 = nn.Conv2d(8, 16, kernel_size=3)  # 16x24x24
-        self.conv3 = nn.Conv2d(16, 32, kernel_size=3)  # 32x22x22
-        self.fc1 = nn.Linear(32 * 9 * 9, 128)
-        self.fc2 = nn.Linear(128, 10)
-        self.dropout = nn.Dropout(0.1)
+        self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)  # 8x28x28
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=3, padding=1)  # 16x14x14
+        self.fc = nn.Linear(16 * 7 * 7, 10)
         
     def forward(self, x):
+        # First conv block
         x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2)  # 8x14x14
+        
+        # Second conv block
         x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2)  # 16x12x12
-        x = self.dropout(x)
+        x = F.max_pool2d(x, 2)  # 16x7x7
         
-        x = F.relu(self.conv3(x))
-        x = F.max_pool2d(x, 2)  # 32x9x9
-        x = self.dropout(x)
-        
-        x = x.view(-1, 32 * 9 * 9)
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
+        # Flatten and fully connected
+        x = x.view(-1, 16 * 7 * 7)
+        x = self.fc(x)
         return F.log_softmax(x, dim=1)
 
 def train_model():
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    # Data loading with minimal augmentation
+    # Data loading
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
@@ -43,12 +38,12 @@ def train_model():
     
     train_dataset = datasets.MNIST(root='./data', train=True, 
                                  transform=transform, download=True)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=64, shuffle=True)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=128, shuffle=True)
     
     # Model, loss and optimizer
     model = LightMNIST().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     
     # Calculate total parameters
     total_params = sum(p.numel() for p in model.parameters())
@@ -62,9 +57,12 @@ def train_model():
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         
+        # Forward pass
         optimizer.zero_grad()
         output = model(data)
         loss = criterion(output, target)
+        
+        # Backward and optimize
         loss.backward()
         optimizer.step()
         
