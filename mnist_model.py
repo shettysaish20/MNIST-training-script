@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
+import numpy as np
 
 class LightMNIST(nn.Module):
     def __init__(self):
@@ -26,6 +28,26 @@ class LightMNIST(nn.Module):
         x = self.fc(x)
         return F.log_softmax(x, dim=1)
 
+def show_augmented_samples(dataset, num_samples=5):
+    fig, axes = plt.subplots(2, num_samples, figsize=(15, 6))
+    
+    for i in range(num_samples):
+        # Original image
+        img, _ = dataset[i]
+        axes[0, i].imshow(img.squeeze(), cmap='gray')
+        axes[0, i].set_title('Original')
+        axes[0, i].axis('off')
+        
+        # Augmented image
+        augmented_img, _ = dataset[i]
+        axes[1, i].imshow(augmented_img.squeeze(), cmap='gray')
+        axes[1, i].set_title('Augmented')
+        axes[1, i].axis('off')
+    
+    plt.tight_layout()
+    plt.savefig('augmented_samples.png')
+    plt.close()
+
 def train_model():
     # Set random seed for reproducibility
     torch.manual_seed(42)
@@ -39,12 +61,17 @@ def train_model():
     # Data loading
     transform = transforms.Compose([
         transforms.ToTensor(),
+        transforms.RandomRotation(10),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+        transforms.RandomPerspective(distortion_scale=0.2, p=0.5),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
     
     train_dataset = datasets.MNIST(root='./data', train=True, 
                                  transform=transform, download=True)
     train_loader = DataLoader(dataset=train_dataset, batch_size=128, shuffle=True)
+    
+    show_augmented_samples(train_dataset)
     
     # Model, loss and optimizer
     model = LightMNIST().to(device)
