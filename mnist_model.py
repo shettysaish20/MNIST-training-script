@@ -34,6 +34,7 @@ def train_model():
     
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
     
     # Data loading
     transform = transforms.Compose([
