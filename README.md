@@ -1,5 +1,7 @@
 # Lightweight MNIST Classifier
 
+![Build Status](https://github.com/shettysaish20/MNIST-training-script/workflows/MNIST%20Model%20Tests/badge.svg)
+
 This project implements a lightweight CNN model for MNIST digit classification that achieves high accuracy with minimal parameters.
 
 ## Model Specifications
