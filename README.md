@@ -24,14 +24,14 @@ pip install torch torchvision
 ```
 
 directory structure:
-
+```
  your-repo/
    ├── .github/
    │   └── workflows/
    │       └── model_tests.yml
    ├── mnist_model.py
    └── test_mnist_model.py
-
+```
 To run tests:
 
 ```
